@@ -183,7 +183,7 @@ function init() {
     });
     
     // NOVO: Carregar o som de pulo
-    audioLoader.load('Son_puloGame/pulo_son.mp3', function(buffer) {
+    audioLoader.load('pulo/pulo_son.mp3', function(buffer) {
         jumpSound.setBuffer(buffer);
         jumpSound.setLoop(false); // Não toca em loop
         jumpSound.setVolume(0.8); // Volume ajustável
