@@ -169,7 +169,7 @@ function init() {
 
     // Carregar o som dos passos
     // Certifique-se de que "passosgame.mp3" está no mesmo diretório do seu HTML ou acessível.
-    audioLoader.load('Son_andarGame/passosgame.mp3', function(buffer) {
+    audioLoader.load('andar/passosgame.mp3', function(buffer) {
         footstepsSound.setBuffer(buffer);
         footstepsSound.setLoop(true); // O som toca em loop enquanto o personagem anda
         footstepsSound.setVolume(0.5); // Volume ajustável
