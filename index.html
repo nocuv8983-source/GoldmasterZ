@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Lobby 3D com Personagem Customizado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative&family=IM+Fell+Great+Primer+SC&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            /* Configurações de Fundo com Imagem */
+            background: url('lobbyimagen/fundolobby.png') no-repeat center center fixed; 
+            background-size: cover; 
+            font-family: 'IM Fell Great Primer SC', serif; 
+            color: #eee; 
+            height: 100vh;
+        }
+        
+        canvas { 
+            display: block; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1; 
+        }
+
+        /* --- UI Geral --- */
+        
+        .ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none; 
+        }
+
+        .ui-top-left {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: auto; 
+        }
+
+        .ui-bottom-right {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            pointer-events: auto; 
+            display: flex;
+            align-items: flex-end; 
+            gap: 10px; 
+            flex-direction: column; 
+        }
+        
+        #active-world-display {
+            font-family: 'IM Fell Great Primer SC', serif;
+            color: #FFD700;
+            background-color: rgba(0, 0, 0, 0.6); 
+            padding: 8px 15px;
+            border: 2px solid #5a3c26; 
+            font-size: 16px;
+            text-align: right;
+            margin-bottom: 5px; 
+            min-width: 200px;
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* --- Botões Base --- */
+        .lobby-button {
+            background-image: url(); 
+            background-size: cover;
+            background-color: rgba(0, 0, 0, 0.6); 
+            background-blend-mode: soft-light; 
+            color: #e1eb34; 
+            border: 3px solid transparent; 
+            padding: 5px 20px;
+            font-size: 15px; 
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7); 
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9); 
+            min-width: 100px;
+            text-align: left;
+            border-radius: 20px; 
+        }
+
+        .lobby-button:hover {
+            background-color: rgba(0, 0, 0, 0.5); 
+            background-blend-mode: overlay; 
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 15px rgba(255, 215, 0, 0.5); 
+        }
+
+        #options-button {
+            text-align: center;
+            font-size: 28px; 
+            padding: 0 10px; 
+            min-width: 47px; 
+            height: 47px;
+            line-height: 47px;
+            text-transform: none;
+            border-radius: 50%;
+        }
+
+        .sub-menu-button {
+            background-color: rgba(50, 50, 50, 0.8);
+            color: #e1eb34;
+            border: 1px solid #777;
+            padding: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-radius: 4px;
+        }
+        .sub-menu-button:hover {
+            background-color: rgba(80, 80, 80, 0.8);
+            color: #fff;
+        }
+        
+        #worlds-button {
+            background-size: cover;
+            background-color: rgba(0, 0, 0, 0.7); 
+            background-blend-mode: soft-light;
+            color: #ccc; 
+            font-size: 15px;
+            height: 47px;
+            width: 30;
+            min-width: auto; 
+            text-align: center;
+            border-radius: 20px;
+        }
+
+        #go-button {
+            background-size: cover;
+            background-color: rgba(0, 0, 0, 0.9); 
+            background-blend-mode: soft-light;
+            padding: 20px 40px;
+            font-size: 15px; 
+            font-family: 'Cinzel Decorative', cursive; 
+            color: #FFD700; 
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255, 215, 0, 0.5); 
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), inset 0 0 15px rgba(255, 215, 0, 0.3); 
+            pointer-events: none; 
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #go-button.active {
+            pointer-events: auto; 
+            opacity: 1;
+            cursor: pointer;
+        }
+        
+        /* --- Estilo para a Mensagem de Carregamento --- */
+
+        #loading-message {
+            position: absolute;
+            top: 20px; 
+            right: 20px; 
+            z-index: 100; 
+            pointer-events: none; 
+        }
+
+        .loading-box {
+            font-family: 'IM Fell Great Primer SC', serif;
+            color: #FFD700;
+            background-color: rgba(0, 0, 0, 0.75); 
+            padding: 10px 20px;
+            border: 3px solid #FFD700; 
+            font-size: 18px;
+            text-align: right;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+        }
+
+        .loading-dots span {
+            opacity: 0;
+            animation: blink 1.2s infinite; 
+            font-weight: bold;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.8s;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* --- MODAIS PRINCIPAIS (OPTIONS E MUSIC) --- */
+        #options-modal, #music-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 30; 
+            display: none;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        #options-modal .modal-content, #music-modal .modal-content {
+            background-color: rgba(20, 20, 20, 0.95);
+            border: 5px solid #4a4a4a;
+            border-radius: 5px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            width: 300px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        /* Menu Header/Title */
+        .menu-header {
+            color: #FFD700;
+            font-size: 1.4em;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #5a3c26;
+            text-align: center;
+            font-family: 'Cinzel Decorative', cursive;
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 5px 0;
+            border-top: 1px dashed rgba(74, 74, 74, 0.5);
+        }
+
+        .setting-item:first-child {
+            border-top: none;
+        }
+
+        .setting-item label {
+            color: #ccc;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #lobby-color-picker {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 30px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #lobby-color-picker::-webkit-color-swatch {
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        #lobby-color-picker::-moz-color-swatch {
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .website-button {
+            text-align: center;
+            padding: 10px 20px;
+            background-color: #5a3c26; 
+            color: #e1eb34;
+            text-decoration: none;
+            border-radius: 5px;
+            border: 2px solid #e1eb34;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            font-size: 1.1em;
+        }
+
+        .website-button:hover {
+            background-color: #6a4c36;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        #song-list-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            border-radius: 5px;
+        }
+        .song-item {
+            padding: 10px;
+            border-bottom: 1px solid #444;
+            cursor: pointer;
+            transition: background-color 0.1s;
+        }
+        .song-item:hover {
+            background-color: rgba(255, 215, 0, 0.1);
+        }
+        .song-item.playing {
+            color: #FFD700;
+            font-weight: bold;
+            background-color: rgba(255, 215, 0, 0.2);
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            color: #ccc;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            line-height: 1; 
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .close-button:hover {
+            color: #fff;
+            border-color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- Modal de Seleção de Mundos --- */
+        #worlds-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); 
+            z-index: 20; 
+            display: none; 
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto; 
+        }
+
+        .worlds-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 25px; 
+            max-width: 950px; 
+            padding: 30px;
+            background-color: rgba(20, 20, 20, 0.95); 
+            background-blend-mode: multiply;
+            border: 5px solid #4a4a4a; 
+            border-radius: 5px; 
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9); 
+        }
+        
+        /* --- Cards de Mundos --- */
+        .world-card {
+            width: 250px;
+            height: 200px;
+            border: 3px solid #555555; 
+            cursor: pointer;
+            transition: transform 0.2s, border 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-start;
+            padding: 10px;
+            box-sizing: border-box;
+            background-size: cover; 
+            background-position: center;
+            background-repeat: no-repeat;
+            box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7); 
+            position: relative; 
+        }
+        
+        .world-card.selected {
+            border: none;
+            border-image: url('https://i.imgur.com/d9j8C1Y.png') 10 / 10px stretch; 
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8); 
+            transform: scale(1.02);
+        }
+        
+        #world-1 { background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('imagenspng/mundo01.png'); } 
+        #world-2 { background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('imagenspng/mundo02.png'); }
+        #world-3 { background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('imagenspng/mundo03.png'); }
+        #world-4 { background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('imagenspng/mundo04.png'); }
+        #world-5 { background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('imagenspng/mundo05.png'); }
+        #world-6 { background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('imagenspng/mundo06.png'); }
+
+        .world-card:hover {
+            transform: scale(1.04);
+            border: 3px solid #FFD700; 
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.5); 
+        }
+
+        .world-name {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #f0e68c; 
+            padding: 8px 12px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 3px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            position: absolute; 
+            bottom: 10px;
+            left: 10px;
+            font-family: 'Cinzel Decorative', cursive;
+        }
+        
+        #close-worlds-menu {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            color: #ccc;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            line-height: 1; 
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        #close-worlds-menu:hover {
+            color: #fff;
+            border-color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+<body>
+    
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="ui-container">
+        <div id="loading-message" style="display: none;">
+            <div class="loading-box">
+                <span id="loading-text">Preparando mundo</span>
+                <span id="loading-dots" class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
+        </div>
+
+        <div class="ui-top-left">
+            <button class="lobby-button" id="profile-button">Perfil</button>
+            <button class="lobby-button" id="friends-button">Amigos</button>
+            <button class="lobby-button" id="store-button">Loja</button>
+            <button class="lobby-button" id="options-button">⚙️</button> 
+        </div>
+
+        <div class="ui-bottom-right">
+            <div id="active-world-display">Nenhum mundo selecionado</div>
+            
+            <div class="button-group">
+                <button class="lobby-button" id="worlds-button">MUNDOS</button>
+                <button class="lobby-button" id="go-button">GO! WORLD</button> 
+            </div>
+        </div>
+    </div>
+    
+    <div id="options-modal">
+        <div class="modal-content">
+            <div class="menu-header">Opções do Jogo</div>
+            
+            <div class="setting-item sensitivity-item">
+                <label for="sensitivity-range">Sensibilidade da Câmera:</label>
+                <input type="range" id="sensitivity-range" min="0.1" max="5.0" step="0.1" value="1.0">
+                <span id="sensitivity-value">1.0</span>
+            </div>
+            
+            <div class="setting-item volume-item">
+                <label for="volume-range">Volume da Música:</label>
+                <input type="range" id="volume-range" min="0.0" max="1.0" step="0.05" value="0.5">
+                <span id="volume-value">50%</span>
+            </div>
+
+            <div class="setting-item">
+                <label>Música Ambiente:</label>
+                <button class="sub-menu-button" id="music-selector-button">Músicas <span id="current-song-display">🎵</span></button>
+            </div>
+            
+            <div class="setting-item">
+                <label>Cor do Lobby (Chão): <span id="color-icon">🎨</span></label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="color" id="lobby-color-picker" value="#000000">
+                    <button class="sub-menu-button" id="reset-color-button" style="min-width: 80px;">Resetar</button>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <a href="https://seusite.com.br" target="_blank" class="website-button" id="website-link">acesse meu site</a>
+            </div>
+            
+            <button class="close-button" id="close-options-modal">X</button>
+        </div>
+    </div>
+    
+    <div id="music-modal">
+        <div class="modal-content">
+            <div class="menu-header">Selecionar Música</div>
+            <div id="song-list-container">
+                </div>
+            <button class="close-button" id="close-music-modal">X</button>
+        </div>
+    </div>
+
+    <div id="worlds-menu">
+        <div class="worlds-grid">
+            <div class="world-card" id="world-1" data-world-id="1">
+                <span class="world-name">Floresta Mística</span>
+            </div>
+            <div class="world-card" id="world-2" data-world-id="2">
+                <span class="world-name">Cidade Cyber</span>
+            </div>
+            <div class="world-card" id="world-3" data-world-id="3">
+                <span class="world-name">Deserto Antigo</span>
+            </div>
+            <div class="world-card" id="world-4" data-world-id="4">
+                <span class="world-name">Reino de Gelo</span>
+            </div>
+            <div class="world-card" id="world-5" data-world-id="5">
+                <span class="world-name">Ilha Vulcânica</span>
+            </div>
+            <div class="world-card" id="world-6" data-world-id="6">
+                <span class="world-name">O Espaço</span>
+            </div>
+        </div>
+        <button class="close-button" id="close-worlds-menu">X</button>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let player; 
+        let leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup; 
+        let clock = new THREE.Clock(); 
+        let audioPlayer; 
+        let defaultLobbyColor = 0x000000; 
+        
+        // NOVIDADE: Player de áudio para o som de toque da UI
+        let uiTouchSound;
+
+        let selectedWorldId = null; 
+        let selectedWorldName = "Nenhum mundo selecionado";
+
+        // MODIFICAÇÃO 1: Definindo o novo valor para descer o personagem.
+        // O valor anterior era -4.0, o que o jogava para fora da tela. -1.7 compensa a altura interna e o coloca no "chão" (Y≈0).
+        const CHARACTER_BASE_Y = -1.7; 
+
+
+        init();
+        animate(); 
+
+        function init() {
+            scene = new THREE.Scene();
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(2, 3, 5); 
+
+            renderer = new THREE.WebGLRenderer({
+                canvas: document.getElementById('bg-canvas'),
+                antialias: true,
+                alpha: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7.5); 
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 50;
+            scene.add(directionalLight);
+
+            createRobloxCharacter();
+            createMusicPlayer(); // Volume inicial definido dentro desta função
+            // NOVIDADE: Inicializa o som de toque da UI
+            initUITouchSound(); 
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enablePan = false;
+            controls.enableZoom = false; 
+            controls.minDistance = 2;
+            controls.maxDistance = 10;
+            
+            // MODIFICAÇÃO 2: Ajuste do alvo da câmera. 
+            // Usamos 2.5 como o centro Y interno do personagem, em vez do 1.5 anterior, para que a câmera gire corretamente em torno do peito dele.
+            controls.target.set(0, 2.5 + CHARACTER_BASE_Y, 0); 
+            
+            controls.rotateSpeed = 1.0; 
+            
+            controls.minPolarAngle = Math.PI / 2; 
+            controls.maxPolarAngle = Math.PI / 2;
+            
+            controls.update();
+
+            createUIListeners(); 
+            createOptionsListeners(); 
+            setActiveWorld(1, 'Floresta Mística'); 
+            
+            // >>> INÍCIO DA MODIFICAÇÃO CHAVE PARA PERSISTÊNCIA: Retomar a música se estava tocando.
+            const storedSongId = localStorage.getItem('currentSongId');
+            const storedVolume = localStorage.getItem('currentVolume');
+
+            if (storedVolume !== null) {
+                 audioPlayer.volume = parseFloat(storedVolume);
+            }
+            
+            if (storedSongId) {
+                // Tenta retomar a música. É necessário uma interação do usuário para o autoplay funcionar na maioria dos navegadores,
+                // mas ao retornar do jogo, o navegador pode permitir.
+                const songId = parseInt(storedSongId);
+                const songName = `songs/son${String(songId).padStart(2, '0')}.mp3`;
+                audioPlayer.src = songName;
+                audioPlayer.currentTime = parseFloat(localStorage.getItem('currentSongTime') || 0); // Retoma do ponto que parou
+                
+                audioPlayer.play().then(() => {
+                    console.log(`Música ${songId} retomada.`);
+                    // Atualiza a UI para o estado 'playing'
+                    document.querySelectorAll('.song-item').forEach(item => item.classList.remove('playing'));
+                    const playingItem = document.getElementById(`song-${songId}`);
+                    if (playingItem) playingItem.classList.add('playing');
+                    document.getElementById('current-song-display').innerHTML = `🎵 (${songId})`;
+                }).catch(error => {
+                    console.error("Falha ao retomar a música. Autoplay bloqueado:", error);
+                    // O navegador pode bloquear o autoplay se não houver interação recente do usuário.
+                    document.getElementById('current-song-display').innerHTML = `🎵`;
+                });
+            } else {
+                 document.getElementById('current-song-display').innerHTML = `🎵`;
+            }
+            // <<< FIM DA MODIFICAÇÃO CHAVE EM init()
+        }
+
+        /**
+         * FUNÇÃO DE CRIAÇÃO DO PERSONAGEM 3D 
+         */
+        function createRobloxCharacter() {
+            // MODIFICAÇÃO 3: A posição Y base do grupo 'player' é ajustada.
+            player = new THREE.Group();
+            player.position.set(0, CHARACTER_BASE_Y, 0); 
+            scene.add(player);
+
+            const skinMaterial = new THREE.MeshLambertMaterial({ color: 0xF1C27D });
+            const shirtMaterial = new THREE.MeshLambertMaterial({ color: 0x4444aa });
+            const pantsMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+            const hairMaterial = new THREE.MeshLambertMaterial({ color: 0x2B1B0E });
+            const eyeMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
+            const mouthMaterial = new THREE.MeshLambertMaterial({ color: 0xAA0000 });
+
+            // Cabeça
+            const headGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            const head = new THREE.Mesh(headGeometry, skinMaterial);
+            head.position.set(0, 3.15, 0); 
+            head.castShadow = true;
+            player.add(head);
+
+            // Cabelo
+            const hairGeometry = new THREE.BoxGeometry(0.85, 0.4, 0.85);
+            const hair = new THREE.Mesh(hairGeometry, hairMaterial);
+            hair.position.set(0, 3.45, 0); 
+            hair.castShadow = true;
+            player.add(hair);
+
+            // Mechas de cabelo
+            const sideHair1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 0.2), hairMaterial);
+            sideHair1.position.set(-0.45, 3.3, 0.2);
+            player.add(sideHair1);
+
+            const sideHair2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 0.2), hairMaterial);
+            sideHair2.position.set(0.45, 3.3, 0.2);
+            player.add(sideHair2);
+
+            // Olhos
+            const eyeGeometry = new THREE.BoxGeometry(0.12, 0.12, 0.04);
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            leftEye.position.set(-0.18, 3.17, 0.41);
+            player.add(leftEye);
+
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(0.18, 3.17, 0.41);
+            player.add(rightEye);
+
+            // Boca
+            const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.03), mouthMaterial);
+            mouth.position.set(0, 2.93, 0.41);
+            player.add(mouth);
+
+            // Corpo
+            const bodyGeometry = new THREE.BoxGeometry(1.1, 1.3, 0.5);
+            const body = new THREE.Mesh(bodyGeometry, shirtMaterial);
+            body.position.set(0, 2.25, 0); 
+            body.castShadow = true;
+            player.add(body);
+
+            // Detalhes do peito
+            const chestDetail = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.52), new THREE.MeshLambertMaterial({ color: 0x3333aa }));
+            chestDetail.position.set(0, 2.45, 0);
+            player.add(chestDetail);
+
+            // Braços
+            const armGeometry = new THREE.BoxGeometry(0.35, 1.1, 0.35);
+            const armMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
+
+            leftArmGroup = new THREE.Group();
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.y = -0.55;
+            leftArm.castShadow = true;
+
+            const leftShoulder = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.4), armMaterial);
+            leftShoulder.position.set(0, 0.1, 0);
+            leftArmGroup.add(leftShoulder);
+
+            const leftForearm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.3), skinMaterial);
+            leftForearm.position.set(0, -0.8, 0);
+            leftArmGroup.add(leftForearm);
+
+            leftArmGroup.add(leftArm);
+            leftArmGroup.position.set(-0.75, 2.95, 0); 
+            player.add(leftArmGroup);
+
+            rightArmGroup = new THREE.Group();
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.y = -0.55;
+            rightArm.castShadow = true;
+
+            const rightShoulder = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.4), armMaterial);
+            rightShoulder.position.set(0, 0.1, 0);
+            rightArmGroup.add(rightShoulder);
+
+            const rightForearm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.3), skinMaterial);
+            rightForearm.position.set(0, -0.8, 0);
+            rightArmGroup.add(rightForearm);
+
+            rightArmGroup.add(rightArm);
+            rightArmGroup.position.set(0.75, 2.95, 0); 
+            player.add(rightArmGroup);
+
+            // Pernas
+            const legGeometry = new THREE.BoxGeometry(0.45, 1.4, 0.45);
+
+            leftLegGroup = new THREE.Group();
+            const leftLeg = new THREE.Mesh(legGeometry, pantsMaterial);
+            leftLeg.position.y = -0.7;
+
+            const leftThigh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.5), pantsMaterial);
+            leftThigh.position.set(0, -0.1, 0);
+            leftLegGroup.add(leftThigh);
+
+            const leftCalf = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.4), pantsMaterial);
+            leftCalf.position.set(0, -1.0, 0);
+            leftLegGroup.add(leftCalf);
+
+            const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.6), new THREE.MeshLambertMaterial({ color: 0x222222 }));
+            leftFoot.position.set(0, -1.5, 0.1);
+            leftLegGroup.add(leftFoot);
+
+            leftLegGroup.add(leftLeg);
+            leftLegGroup.position.set(-0.3, 1.5, 0); 
+            player.add(leftLegGroup);
+
+            rightLegGroup = new THREE.Group();
+            const rightLeg = new THREE.Mesh(legGeometry, pantsMaterial);
+            rightLeg.position.y = -0.7;
+
+            const rightThigh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.5), pantsMaterial);
+            rightThigh.position.set(0, -0.1, 0);
+            rightLegGroup.add(rightThigh);
+
+            const rightCalf = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.4), pantsMaterial);
+            rightCalf.position.set(0, -1.0, 0);
+            rightLegGroup.add(rightCalf);
+
+            const rightFoot = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.6), new THREE.MeshLambertMaterial({ color: 0x222222 }));
+            rightFoot.position.set(0, -1.5, 0.1);
+            rightLegGroup.add(rightFoot);
+
+            rightLegGroup.add(rightLeg);
+            rightLegGroup.position.set(0.3, 1.5, 0); 
+            player.add(rightLegGroup);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const elapsedTime = clock.getElapsedTime();
+
+            if (player) {
+                // MODIFICAÇÃO 4: A animação continua usando a nova altura base.
+                player.position.y = CHARACTER_BASE_Y + Math.sin(elapsedTime * 1.5) * 0.03; 
+
+                // Animação de balanço de braço
+                const swing = Math.sin(elapsedTime * 2.5) * 0.2; 
+                if (leftArmGroup && rightArmGroup) {
+                    leftArmGroup.rotation.x = swing;
+                    rightArmGroup.rotation.x = -swing; 
+                }
+            }
+
+            controls.update(delta);
+            renderer.render(scene, camera);
+        }
+        
+        // --- FUNÇÕES DE SOM DE TOQUE DA UI (NOVIDADE) ---
+        
+        function initUITouchSound() {
+            uiTouchSound = new Audio('songs/toqueUI.mp3');
+            uiTouchSound.volume = 0.5; // O som de toque da UI também terá 50%
+        }
+
+        function playUITouchSound() {
+            if (uiTouchSound) {
+                // Reinicia o som para que ele possa ser tocado rapidamente em sequência
+                uiTouchSound.currentTime = 0; 
+                uiTouchSound.play().catch(error => {
+                    // Captura e ignora erros comuns de autoplay do navegador
+                    console.log("Falha ao tentar tocar o som da UI (ignorado se for bloqueio de autoplay):", error.message);
+                });
+            }
+        }
+
+        // --- FUNÇÕES DE MÚSICA E COR (Função de cor sem efeito 3D) ---
+
+        function createMusicPlayer() {
+            audioPlayer = new Audio();
+            audioPlayer.loop = true;
+            
+            // Define o volume inicial a partir do localStorage ou 0.5 (padrão)
+            const storedVolume = localStorage.getItem('currentVolume');
+            audioPlayer.volume = storedVolume !== null ? parseFloat(storedVolume) : 0.5;
+            
+            const songListContainer = document.getElementById('song-list-container');
+
+            for (let i = 1; i <= 10; i++) {
+                const songNumber = String(i).padStart(2, '0');
+                const songName = `songs/son${songNumber}.mp3`; 
+                
+                const songItem = document.createElement('div');
+                songItem.classList.add('song-item');
+                songItem.id = `song-${i}`;
+                songItem.innerText = `[${songNumber}] ${songName}`;
+                songItem.setAttribute('data-song-id', i);
+                
+                songItem.addEventListener('click', () => {
+                    playUITouchSound(); // Toca o som ao selecionar uma música
+                    playSong(i);
+                    document.getElementById('music-modal').style.display = 'none';
+                });
+                
+                songListContainer.appendChild(songItem);
+            }
+            
+            const stopItem = document.createElement('div');
+            stopItem.classList.add('song-item');
+            stopItem.innerText = '🔇 Parar Música';
+            stopItem.style.color = '#ff4444';
+            stopItem.addEventListener('click', () => {
+                playUITouchSound(); // Toca o som ao parar a música
+                stopMusic();
+                document.getElementById('music-modal').style.display = 'none';
+            });
+            songListContainer.appendChild(stopItem);
+        }
+
+        function playSong(songNumber) {
+            const songName = `songs/son${String(songNumber).padStart(2, '0')}.mp3`;
+            audioPlayer.src = songName;
+            
+            // >>> MODIFICAÇÃO CHAVE 2: Salva o ID da música no localStorage
+            localStorage.setItem('currentSongId', songNumber);
+            localStorage.setItem('currentSongTime', 0); // Zera o tempo ao trocar de música
+
+            const playPromise = audioPlayer.play();
+
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // Tocar iniciado com sucesso
+                }).catch(error => {
+                    console.error("Erro ao tentar tocar a música:", error);
+                    alert("O navegador pode ter bloqueado o início automático da música. Tente interagir com a página.");
+                });
+            }
+            
+            document.querySelectorAll('.song-item').forEach(item => item.classList.remove('playing'));
+            document.getElementById(`song-${songNumber}`).classList.add('playing');
+            document.getElementById('current-song-display').innerHTML = `🎵 (${songNumber})`;
+        }
+
+        function stopMusic() {
+            if (audioPlayer) {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                
+                // >>> MODIFICAÇÃO CHAVE 3: Remove o ID e o tempo do localStorage
+                localStorage.removeItem('currentSongId');
+                localStorage.removeItem('currentSongTime');
+                
+                document.querySelectorAll('.song-item').forEach(item => item.classList.remove('playing'));
+                document.getElementById('current-song-display').innerHTML = `🎵`;
+            }
+        }
+        
+        // >>> MODIFICAÇÃO CHAVE 4: Atualiza o tempo e o volume antes de sair da página
+        // Este evento é crucial para salvar o estado antes da navegação.
+        window.addEventListener('beforeunload', () => {
+            if (audioPlayer && !audioPlayer.paused) {
+                // Salva a posição atual da música (currentTime) e o volume
+                localStorage.setItem('currentSongTime', audioPlayer.currentTime);
+                localStorage.setItem('currentVolume', audioPlayer.volume);
+            } else {
+                 // Garante que o volume seja persistido mesmo que a música esteja parada
+                localStorage.setItem('currentVolume', audioPlayer.volume);
+            }
+        });
+
+
+        function updateLobbyColor(hexColor) {
+            // A cor do lobby não tem efeito direto na cena 3D, pois o chão foi removido.
+            console.log("A cor do lobby foi atualizada (efeito visual do chão removido).");
+        }
+
+        // --- LISTENERS DE OPÇÕES ---
+        function createOptionsListeners() {
+            const optionsButton = document.getElementById('options-button');
+            const optionsModal = document.getElementById('options-modal');
+            const closeOptionsModal = document.getElementById('close-options-modal');
+            const musicSelectorButton = document.getElementById('music-selector-button');
+            const musicModal = document.getElementById('music-modal');
+            const closeMusicModal = document.getElementById('close-music-modal');
+            
+            const sensitivityRange = document.getElementById('sensitivity-range');
+            const sensitivityValueSpan = document.getElementById('sensitivity-value');
+            
+            // NOVIDADE: Elementos do Volume
+            const volumeRange = document.getElementById('volume-range');
+            const volumeValueSpan = document.getElementById('volume-value');
+            
+            const colorPicker = document.getElementById('lobby-color-picker');
+            const resetColorButton = document.getElementById('reset-color-button');
+            const websiteLink = document.getElementById('website-link'); // Novo ID para o link
+
+            // 1. ABRIR/FECHAR MODAL DE OPÇÕES
+            optionsButton.addEventListener('click', (e) => {
+                playUITouchSound(); // Toca o som ao abrir
+                e.stopPropagation();
+                optionsModal.style.display = 'flex';
+            });
+            
+            closeOptionsModal.addEventListener('click', () => {
+                playUITouchSound(); // Toca o som ao fechar
+                optionsModal.style.display = 'none';
+            });
+
+            optionsModal.addEventListener('click', (event) => {
+                if (event.target === optionsModal) {
+                    playUITouchSound(); // Toca o som ao fechar clicando fora
+                    optionsModal.style.display = 'none';
+                }
+            });
+
+            // 2. AJUSTE DE SENSIBILIDADE DA CÂMERA
+            sensitivityRange.value = controls.rotateSpeed; 
+            sensitivityValueSpan.innerText = controls.rotateSpeed.toFixed(1);
+
+            sensitivityRange.addEventListener('input', (e) => {
+                const newSensitivity = parseFloat(e.target.value);
+                controls.rotateSpeed = newSensitivity;
+                sensitivityValueSpan.innerText = newSensitivity.toFixed(1);
+            });
+            
+            // 3. NOVIDADE: AJUSTE DE VOLUME DA MÚSICA
+            volumeRange.value = audioPlayer.volume; 
+            volumeValueSpan.innerText = `${Math.round(audioPlayer.volume * 100)}%`;
+
+            volumeRange.addEventListener('input', (e) => {
+                const newVolume = parseFloat(e.target.value);
+                audioPlayer.volume = newVolume;
+                
+                // Salva o volume no localStorage ao mudar (para persistir entre sessões)
+                localStorage.setItem('currentVolume', newVolume); 
+                
+                volumeValueSpan.innerText = `${Math.round(newVolume * 100)}%`;
+            });
+
+            
+            // 4. SELETOR DE MÚSICA
+            musicSelectorButton.addEventListener('click', (e) => {
+                playUITouchSound(); // Toca o som ao abrir o sub-menu de música
+                e.stopPropagation();
+                musicModal.style.display = 'flex';
+            });
+            
+            closeMusicModal.addEventListener('click', () => {
+                playUITouchSound(); // Toca o som ao fechar o sub-menu
+                musicModal.style.display = 'none';
+            });
+
+            musicModal.addEventListener('click', (event) => {
+                if (event.target === musicModal) {
+                    playUITouchSound(); // Toca o som ao fechar clicando fora
+                    musicModal.style.display = 'none';
+                }
+            });
+
+            // 5. ALTERNÂNCIA DE COR DO LOBBY
+            colorPicker.addEventListener('input', (e) => {
+                updateLobbyColor(e.target.value);
+            });
+            
+            resetColorButton.addEventListener('click', () => {
+                playUITouchSound(); // Toca o som ao resetar
+                const hexDefault = '#' + defaultLobbyColor.toString(16).padStart(6, '0');
+                colorPicker.value = hexDefault;
+                updateLobbyColor(hexDefault);
+            });
+            
+            // 6. Botão "acesse meu site"
+            websiteLink.addEventListener('click', () => {
+                playUITouchSound(); // Toca o som ao clicar no link
+            });
+            
+            // 7. Demais botões de UI (Perfil, Amigos, Loja)
+            document.getElementById('profile-button').addEventListener('click', playUITouchSound);
+            document.getElementById('friends-button').addEventListener('click', playUITouchSound);
+            document.getElementById('store-button').addEventListener('click', playUITouchSound);
+        }
+
+
+        // --- LISTENERS DE MUNDO ---
+        function setActiveWorld(id, name) {
+            selectedWorldId = id;
+            selectedWorldName = name;
+            
+            document.getElementById('active-world-display').innerText = `Mundo Selecionado: ${name}`;
+            
+            const goButton = document.getElementById('go-button');
+            goButton.classList.add('active');
+            
+            document.querySelectorAll('.world-card').forEach(card => {
+                card.classList.remove('selected');
+                card.style.borderImage = 'none'; 
+                card.style.border = '3px solid #555555'; 
+                
+                if (card.getAttribute('data-world-id') == id) {
+                    card.classList.add('selected');
+                    card.style.border = 'none'; 
+                    card.style.borderImage = "url('https://i.imgur.com/d9j8C1Y.png') 10 / 10px stretch";
+                }
+            });
+        }
+
+        function createUIListeners() {
+            const worldsMenu = document.getElementById('worlds-menu');
+            const goButton = document.getElementById('go-button');
+            const loadingMessage = document.getElementById('loading-message'); // NOVO: Obter a div de loading
+            
+            document.getElementById('worlds-button').addEventListener('click', (e) => {
+                playUITouchSound(); 
+                e.stopPropagation(); 
+                worldsMenu.style.display = 'flex'; 
+            });
+            
+            goButton.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                
+                if (selectedWorldId) {
+                    playUITouchSound(); 
+                    
+                    // 1. Mostrar a mensagem de carregamento
+                    loadingMessage.style.display = 'block'; 
+                    goButton.classList.remove('active'); // Desativa o botão GO temporariamente
+                    goButton.style.cursor = 'wait'; 
+
+                    // 2. Esperar 3 segundos
+                    setTimeout(() => {
+                        
+                        // 3. Esconder a mensagem e seguir com a navegação
+                        loadingMessage.style.display = 'none'; 
+                        goButton.classList.add('active'); // Reativa o botão
+                        goButton.style.cursor = 'pointer';
+
+                        // A função original para navegação
+                        window.location.href = `car${selectedWorldId}.html`; 
+                        
+                    }, 3000); // 3000 milissegundos = 3 segundos
+
+                } else {
+                    alert('Por favor, selecione um mundo antes de iniciar!');
+                }
+            });
+            
+            document.getElementById('close-worlds-menu').addEventListener('click', (e) => {
+                playUITouchSound(); 
+                e.stopPropagation();
+                worldsMenu.style.display = 'none'; 
+            });
+            
+            document.querySelectorAll('.world-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    playUITouchSound(); 
+                    e.stopPropagation();
+                    
+                    const worldId = e.currentTarget.getAttribute('data-world-id');
+                    const worldName = e.currentTarget.querySelector('.world-name').innerText;
+                    
+                    setActiveWorld(worldId, worldName);
+                    
+                    worldsMenu.style.display = 'none'; 
+                });
+            });
+            
+            worldsMenu.addEventListener('click', (event) => {
+                if (event.target === worldsMenu) {
+                    playUITouchSound(); 
+                    worldsMenu.style.display = 'none';
+                }
+            });
+            
+            window.addEventListener('resize', onWindowResize, false);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Lógica de bloqueio de navegação no histórico (caminhos originais mantidos)
+        (function bloquearVoltarParaGames() {
+          const ref = document.referrer; 
+
+          const games = [
+            // Agora a lista inclui a pasta de carregamento
+            "carregamentoHTML_image/car1.html", "carregamentoHTML_image/car2.html", "carregamentoHTML_image/car3.html", 
+            "carregamentoHTML_image/car4.html", "carregamentoHTML_image/car5.html", "carregamentoHTML_image/car6.html"
+          ];
+
+          if (ref && games.some(p => ref.includes(p))) {
+            window.location.replace(window.location.href);
+          }
+
+          if (window.history && window.history.pushState) {
+            history.pushState(null, null, window.location.href);
+            window.addEventListener("popstate", () => {
+              history.pushState(null, null, window.location.href);
+            });
+          }
+        })();
+    </script>
+</body>
+</html>
